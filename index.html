@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111111">
+<link rel="manifest" href="manifest.json">
+<title>Mi Rutina</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f5f5f7;color:#171717}
+header{position:sticky;top:0;z-index:3;background:rgba(245,245,247,.94);backdrop-filter:blur(12px);padding:16px 16px 10px;border-bottom:1px solid #ddd}
+h1{font-size:27px;margin:0 0 12px}.tabs{display:flex;gap:7px}.tabs button{flex:1;border:0;border-radius:10px;padding:10px;background:#ddd;font-weight:700}.tabs button.active{background:#111;color:white}
+main{padding:14px 14px 100px;max-width:700px;margin:auto}.subtitle{color:#666;margin:0 0 14px}
+.card{background:white;border-radius:17px;padding:15px;margin:12px 0;box-shadow:0 1px 5px #00000010}.name{font-weight:750;font-size:16px;line-height:1.25}.rx{color:#777;font-size:13px;margin-top:4px}
+.set{display:grid;grid-template-columns:55px 1fr 92px;gap:8px;align-items:center;margin-top:10px}.set label{font-size:13px;color:#666}
+input{width:100%;border:1px solid #d5d5d5;border-radius:10px;padding:11px;font-size:16px;background:#fafafa}
+footer{position:fixed;bottom:0;left:0;right:0;background:rgba(255,255,255,.95);border-top:1px solid #ddd;padding:10px 14px calc(10px + env(safe-area-inset-bottom));display:flex;gap:8px}
+button.action{flex:1;border:0;border-radius:12px;padding:13px;font-weight:750;font-size:15px}.save{background:#111;color:#fff}.clear{background:#e7e7e7}
+#history{display:none}.hist{background:white;border-radius:14px;padding:12px;margin:8px 0}.date{font-weight:700}.small{font-size:12px;color:#666;margin-top:5px}
+</style>
+</head>
+<body>
+<header>
+<h1>Mi rutina</h1>
+<div class="tabs">
+<button data-day="0" class="active">Día 1</button>
+<button data-day="1">Día 2</button>
+<button data-day="2">Día 3</button>
+</div>
+</header>
+<main>
+<section id="routine"></section>
+<section id="history">
+<h2>Historial</h2><div id="historyList"></div>
+</section>
+</main>
+<footer>
+<button class="action clear" id="clear">Limpiar</button>
+<button class="action save" id="save">Guardar entrenamiento</button>
+</footer>
+<script>
+const days=[
+{title:"Cuádriceps + Pecho",ex:[
+["Sentadilla péndulo o hack",3,6,8],["Press inclinado máquina o Smith",3,6,8],["Remo T en máquina",3,6,8],["Curl femoral sentado o acostado",2,10,12],["Elevaciones laterales en polea (unilateral)",3,10,12],["Extensiones de tríceps con soga",2,8,12],["Curl bayesian",2,10,12],["Abdominales en máquina o polea",2,12,15]]},
+{title:"Cadena posterior + Espalda",ex:[
+["Peso muerto rumano con barra",3,6,8],["Jalón al pecho agarre neutro",3,6,8],["Prensa",2,8,10],["Press militar máquina o Smith",2,6,8],["Remo unilateral máquina o polea",2,8,10],["Hombro posterior en Peck Deck o poleas",2,10,12],["Curl con barra en polea",2,10,12],["Extensiones de tríceps trasnuca unilateral",2,10,12]]},
+{title:"Torso + Piernas",ex:[
+["Sentadilla péndulo o hack",3,6,8],["Press inclinado con mancuernas",3,6,8],["Jalón al pecho agarre neutro",3,6,8],["Extensiones de cadera en banco lumbar",2,10,12],["Aperturas de pecho en máquina Peck Deck o polea",2,10,12],["Elevaciones laterales con mancuernas",3,10,12],["Curl banco Scott máquina o unilateral con mancuernas",2,10,12],["Press francés",2,8,10],["Rueda abdominal",2,12,15]]}
+];
+
+let day=0;
+const key='rutina_gimnasio_v1';
+let data=JSON.parse(localStorage.getItem(key)||'{"current":{},"history":[]}');
+
+function id(d,e,s){return `${d}-${e}-${s}`}
+function render(){
+ const d=days[day]; document.querySelectorAll('.tabs button').forEach((b,i)=>b.classList.toggle('active',i===day));
+ let h=`<p class="subtitle">Día ${day+1} · ${d.title}</p>`;
+ d.ex.forEach((e,ei)=>{
+   h+=`<div class="card"><div class="name">${e[0]}</div><div class="rx">${e[1]}×${e[2]}–${e[3]}</div>`;
+   for(let s=0;s<e[1];s++){
+     const v=data.current[id(day,ei,s)]||{};
+     h+=`<div class="set"><label>Serie ${s+1}</label><input inputmode="decimal" placeholder="Peso (kg)" value="${v.w??''}" data-k="${id(day,ei,s)}" data-f="w"><input inputmode="numeric" placeholder="Reps" value="${v.r??''}" data-k="${id(day,ei,s)}" data-f="r"></div>`;
+   } h+='</div>';
+ });
+ document.getElementById('routine').innerHTML=h;
+ document.querySelectorAll('input').forEach(inp=>inp.addEventListener('input',e=>{
+   const k=e.target.dataset.k,f=e.target.dataset.f; data.current[k]=data.current[k]||{}; data.current[k][f]=e.target.value; localStorage.setItem(key,JSON.stringify(data));
+ }));
+}
+function save(){
+ data.history.unshift({date:new Date().toISOString(),day,values:{...data.current}});
+ data.history=data.history.slice(0,50); localStorage.setItem(key,JSON.stringify(data));
+ alert('Entrenamiento guardado');
+ renderHistory();
+}
+function renderHistory(){
+ const box=document.getElementById('historyList');
+ box.innerHTML=data.history.length?data.history.map(x=>{
+   const dt=new Date(x.date).toLocaleString('es-AR',{dateStyle:'medium',timeStyle:'short'});
+   return `<div class="hist"><div class="date">Día ${x.day+1} · ${days[x.day].title}</div><div class="small">${dt}</div></div>`;
+ }).join(''):'<p class="small">Todavía no hay entrenamientos guardados.</p>';
+}
+document.querySelectorAll('.tabs button').forEach((b,i)=>b.onclick=()=>{day=i;render()});
+document.getElementById('save').onclick=save;
+document.getElementById('clear').onclick=()=>{data.current={};localStorage.setItem(key,JSON.stringify(data));render()};
+render();renderHistory();
+</script>
+</body>
+</html>
