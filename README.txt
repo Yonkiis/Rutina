@@ -1,0 +1,1 @@
+Reemplaza index.html y manifest.json en tu repositorio de GitHub Pages. Esta versión guarda sesiones, historial, última vez y permite exportar un respaldo JSON.
